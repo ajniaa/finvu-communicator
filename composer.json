@@ -2,19 +2,21 @@
     "name": "ltajniaa/finvu-communicator",
     "description": "A package to use finvu api for AA consent and for fetching data",
     "type": "library",
-    "version": "1.0.0",
+    "license": "proprietary",
+    "authors": [
+        {
+            "name": "Ajay Chaudhary",
+            "email": "ajay@ajniaa.com"
+        }
+    ],
     "minimum-stability": "dev",
     "autoload": {
-        "psr-4": {"ltajniaa\\FinvuCommunicator\\": "src/"}
-    }, 
+        "psr-4": {
+            "ltajniaa\\FinvuCommunicator\\": "src/"
+        }
+    },
     "require": {
-        "php": ">=7.2.0",
         "guzzlehttp/guzzle": "^7.0",
         "ramsey/uuid": "^4.2"
-    },
-    "license": "proprietary",
-    "authors": [{
-        "name": "Ajay Chaudhary",
-        "email": "ajay@ajniaa.com"
-    }]
+    }
 }
