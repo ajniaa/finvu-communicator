@@ -1,0 +1,13 @@
+{
+    "name": "ltajniaa/finvu-communicator",
+    "description": "A package to use finvu api for AA consent and for fetching data",
+    "type": "library",
+    "minimum-stability": "stable",
+    "autoload": {
+        "psr-4": {"LTAJNIAA\\FinvuCommunicator\\": "src/"}
+    }, 
+    "require": {
+        "guzzlehttp/guzzle": "^7.0",
+        "ramsey/uuid": "^4.2"
+    }
+}
