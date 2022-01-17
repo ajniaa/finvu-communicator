@@ -5,7 +5,7 @@
     "version": "1.0.0",
     "minimum-stability": "stable",
     "autoload": {
-        "psr-4": {"LTAJNIAA\\FinvuCommunicator\\": "src/"}
+        "psr-4": {"ltajniaa\\FinvuCommunicator\\": "src/"}
     }, 
     "require": {
         "guzzlehttp/guzzle": "^7.0",
