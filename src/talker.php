@@ -88,10 +88,10 @@ class Talker
             <input type="button" onclick="javascript:launchAA()" value="Share via AA">';
             echo $outputText;
 
-            array_push($resultArr, ['ConsentHandle' => $res->body->ConsentHandle]);
-            array_push($resultArr, ['encryptedRequest' => $res->body->encryptedRequest]);
-            array_push($resultArr, ['requestDate' => $res->body->requestDate]);
-            array_push($resultArr, ['encryptedFiuId' => $res->body->encryptedFiuId]);
+            $resultArr['ConsentHandle'] = $res->body->ConsentHandle;
+            $resultArr['encryptedRequest'] = $res->body->encryptedRequest;
+            $resultArr['requestDate'] = $res->body->requestDate;
+            $resultArr['encryptedFiuId'] = $res->body->encryptedFiuId;
 
         }else{
             //throw new \Exception("API responded with error:"+$code);

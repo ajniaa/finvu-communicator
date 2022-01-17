@@ -9,14 +9,14 @@
             "email": "ajay@ajniaa.com"
         }
     ],
-    "minimum-stability": "dev",
+    "minimum-stability": "stable",
     "autoload": {
         "psr-4": {
             "ltajniaa\\FinvuCommunicator\\": "src/"
         }
     },
     "require": {
-        "guzzlehttp/guzzle": "^7.0",
+        "guzzlehttp/guzzle": "^7.4",
         "ramsey/uuid": "^4.2"
     }
 }
