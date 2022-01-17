@@ -2,6 +2,7 @@
     "name": "ltajniaa/finvu-communicator",
     "description": "A package to use finvu api for AA consent and for fetching data",
     "type": "library",
+    "version": "1.0.0",
     "minimum-stability": "stable",
     "autoload": {
         "psr-4": {"LTAJNIAA\\FinvuCommunicator\\": "src/"}
