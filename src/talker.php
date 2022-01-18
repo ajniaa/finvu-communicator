@@ -1,6 +1,8 @@
 <?php
+
 namespace ltajniaa\FinvuCommunicator;
 
+use Exception;
 use GuzzleHttp\Client;
 use GuzzleHttp\Psr7;
 use GuzzleHttp\Psr7\Request;
@@ -10,16 +12,12 @@ use Ramsey\Uuid\Uuid;
 class Talker
 {
     private $account;
-    private $login;
-    private $pass;
     private $token;
     private $baseUri;
 
-    function __construct($account, $login, $pass)
+    function __construct($account)
     {
         $this->account = $account;
-        $this->login = $login;
-        $this->pass = $pass;
         $this->baseUri = "https://" . $account . ".fiu.finfactor.in/finsense/API/V1/";
     }
 
@@ -28,176 +26,331 @@ class Talker
         $this->token = $token;
     }
 
-    function getAccessToken()
+    function getAccessToken($login, $pass)
     {
+        $rtStatus = "success";
+        $rtStore = [];
+        $rtApiCallData = [];
+
         if (!$this->token) {
             $client = new Client(['base_uri' => $this->baseUri, 'timeout'  => 2.0,]);
             $data = [
                 'header' => ["rid" => Uuid::uuid4()->toString(), "ts" =>  date(\DateTime::ISO8601), "channelId" => "finsense"],
-                'body' => ["userId" => $this->login, "password" => $this->pass]
+                'body' => ["userId" => $login, "password" => $pass]
             ];
+            $rtApiCallData['endpoint'] =  $this->baseUri . 'User/Login';
+            $rtApiCallData['request'] = $data;
 
-            //$response = $client->request('POST', 'User/Login', ['header' => [ 'content-type' => 'application/json'], 'body' => json_encode($data)]);
-            $response = $client->request('POST', 'User/Login', ['body' => json_encode($data)]);
-            $code = $response->getStatusCode();
-            if($code ==200){
-                $body = $response->getBody();
-                $contents = $body->getContents();
-                $res = (object)json_decode($contents);
-                $this->token =  $res->body->token;
-            }else{
-                //throw new \Exception("API responded with error:"+$code);
+            $code = 0;
+            try {
+                $response = $client->request('POST', 'User/Login', ['body' => json_encode($data)]);
+                $code = $response->getStatusCode();
+            } catch (\Exception $e) {
+                $rtStatus = "error";
             }
+
+            if ($code == 200) {
+                try {
+                    $contents  = $response->getBody()->getContents();
+                    $rtApiCallData['response'] = $contents;
+
+                    $res = (object)json_decode($contents);
+
+                    if (!$res->body->token) {
+                        throw new \Exception('invalid data');
+                    }
+
+
+                    $this->token =  $res->body->token;
+                    $rtStore['token'] = $this->token;
+                } catch (\Exception $e) {
+                    $rtStatus = "failure";
+                }
+            } else if ($code == 0) {
+                $rtStatus = "error";
+            } else {
+                $rtStatus = "failure";
+                try {
+                    $contents  = $response->getBody()->getContents();
+                    $rtApiCallData['response'] = $contents;
+                } catch (\Exception $e) {
+                    $rtStatus = "failure";
+                }
+            }
+        } else {
+            $rtStore['token'] = $this->token;
         }
-        return $this->token;
+
+        $responseJSON = ['status' =>  $rtStatus, 'store' => $rtStore, 'apiCallData' => $rtApiCallData];
+
+        return json_encode($responseJSON);
     }
 
     function raiseConsentRequest($custId, $consentDescription, $templateName, $userSessionId)
     {
-        $resultArr = [];
-        $client = new Client(['base_uri' => $this->baseUri, 'timeout'  => 2.0 ]);
+        $rtStatus = "success";
+        $rtStore = [];
+        $rtApiCallData = [];
+
+        $client = new Client(['base_uri' => $this->baseUri, 'timeout'  => 2.0]);
         $data = [
             'header' => ["rid" => Uuid::uuid4()->toString(), "ts" =>  date(\DateTime::ISO8601), "channelId" => "finsense"],
-            'body' => ["custId" => $custId, "consentDescription"=> $consentDescription, "templateName" => $templateName, "userSessionId"=> $userSessionId]
+            'body' => ["custId" => $custId, "consentDescription" => $consentDescription, "templateName" => $templateName, "userSessionId" => $userSessionId]
         ];
 
+        $rtApiCallData['endpoint'] =  $this->baseUri . 'ConsentRequestEncrypt';
+        $rtApiCallData['request'] = $data;
+
         $code = 0;
-        try{
-            $response = $client->request('POST', 'ConsentRequestEncrypt', ['headers' => ['Authorization' => 'Bearer: '.$this->token, 'content-type' => 'application/json'], 'body' => json_encode($data)]);
+        try {
+            $response = $client->request('POST', 'ConsentRequestEncrypt', ['headers' => ['Authorization' => 'Bearer: ' . $this->token, 'content-type' => 'application/json'], 'body' => json_encode($data)]);
             $code = $response->getStatusCode();
+        } catch (\Exception $e) {
+            $rtStatus = "error";
         }
-        catch(\Exception $e){
-            echo $e;
-        }
-        if($code ==200){
-            $contents = $response->getBody()->getContents();
-            $res = (object)json_decode($contents);
+        if ($code == 200) {
+            try {
+                $contents = $response->getBody()->getContents();
+                $rtApiCallData['response'] = $contents;
 
-            $outputText = '<script src="https://finvu.in/sdk/dist/finvu-aa.js"></script>
-            
-            <script>
-            var ecreq = "'. $res->body->encryptedRequest .'"; var reqdate = "'. $res->body->requestDate .'";var fi = "'. $res->body->encryptedFiuId .'";
-            function launchAA(event){
-                let aa = new FinvuAA();
-                aa.open(ecreq, reqdate, fi, function (response){
-                 //alert(response.data.status);
-                });
-                event.preventDefault();
+                $res = (object)json_decode($contents);
+
+                if (!$res->body->encryptedRequest) {
+                    throw new \Exception('invalid data');
+                }
+
+                $outputText = '<script src="https://finvu.in/sdk/dist/finvu-aa.js"></script>
+                <script>
+                var ecreq = "' . $res->body->encryptedRequest . '"; var reqdate = "' . $res->body->requestDate . '";var fi = "' . $res->body->encryptedFiuId . '";
+                function launchAA(event){
+                    let aa = new FinvuAA();
+                    aa.open(ecreq, reqdate, fi, function (response){
+                    //alert(response.data.status);
+                    });
+                    
+                }
+                </script>
+                <input type="button" onclick="javascript:launchAA()" value="Share via AA">';
+
+                $rtStore['JavaScriptForPage'] = $outputText;
+
+                $rtStore['ConsentHandle'] = $res->body->ConsentHandle;
+                $rtStore['encryptedRequest'] = $res->body->encryptedRequest;
+                $rtStore['requestDate'] = $res->body->requestDate;
+                $rtStore['encryptedFiuId'] = $res->body->encryptedFiuId;
+            } catch (\Exception $e) {
+                $rtStatus = "failure";
             }
-            </script>
-            <input type="button" onclick="javascript:launchAA()" value="Share via AA">';
-            echo $outputText;
-
-            $resultArr['ConsentHandle'] = $res->body->ConsentHandle;
-            $resultArr['encryptedRequest'] = $res->body->encryptedRequest;
-            $resultArr['requestDate'] = $res->body->requestDate;
-            $resultArr['encryptedFiuId'] = $res->body->encryptedFiuId;
-
-        }else{
-            //throw new \Exception("API responded with error:"+$code);
-            print($code);
+        } else if ($code == 0) {
+            $rtStatus = "error";
+        } else {
+            $rtStatus = "failure";
+            try {
+                $contents  = $response->getBody()->getContents();
+                $rtApiCallData['response'] = $contents;
+            } catch (\Exception $e) {
+                $rtStatus = "failure";
+            }
         }
-        return $resultArr;
+
+        $responseJSON = ['status' =>  $rtStatus, 'store' => $rtStore, 'apiCallData' => $rtApiCallData];
+        return json_encode($responseJSON);
     }
 
     function checkConsentStatus($custId, $consentHandleId)
     {
-        $resultArr = [];
-        $client = new Client(['base_uri' => $this->baseUri, 'timeout'  => 2.0 ]);
+
+        $rtStatus = "success";
+        $rtStore = [];
+        $rtApiCallData = [];
+
+        $client = new Client(['base_uri' => $this->baseUri, 'timeout'  => 2.0]);
         $code = 0;
-        try{
-            $response = $client->request('GET', 'ConsentStatus/'. $custId. '/'. $consentHandleId , ['headers' => ['Authorization' => 'Bearer: '.$this->token, 'content-type' => 'application/json']]);
+
+        $rtApiCallData['endpoint'] =  $this->baseUri . 'ConsentStatus/' . $consentHandleId . '/' . $custId;
+        $rtApiCallData['request'] = "";
+        try {
+            $response = $client->request('GET', 'ConsentStatus/' . $consentHandleId . '/' . $custId, ['headers' => ['Authorization' => 'Bearer: ' . $this->token, 'content-type' => 'application/json']]);
             $code = $response->getStatusCode();
+        } catch (\Exception $e) {
+            $rtStatus = "error";
         }
-        catch(\Exception $e){
-            echo $e;
+        if ($code == 200) {
+            try {
+                $contents = $response->getBody()->getContents();
+                $rtApiCallData['response'] = $contents;
+
+                $res = (object)json_decode($contents);
+
+                if (!$res->body->consentStatus) {
+                    throw new \Exception('invalid data');
+                }
+
+                $rtStore['consentStatus'] = $res->body->consentStatus;
+                $rtStore['consentId'] = $res->body->consentId;
+            } catch (\Exception $e) {
+                $rtStatus = "failure";
+            }
+        } else if ($code == 0) {
+            $rtStatus = "error";
+        } else {
+            $rtStatus = "failure";
+            try {
+                $contents  = $response->getBody()->getContents();
+                $rtApiCallData['response'] = $contents;
+            } catch (\Exception $e) {
+                $rtStatus = "failure";
+            }
         }
-        if($code ==200){
-            $contents = $response->getBody()->getContents();
-            $res = (object)json_decode($contents);
-            array_push($resultArr, ['consentStatus' => $res->body->consentStatus]);
-            array_push($resultArr, ['consentId' => $res->body->consentId]);
-        }else{
-            //throw new \Exception("API responded with error:"+$code);
-            print($code);
-        }
-        return $resultArr;
+
+        $responseJSON = ['status' =>  $rtStatus, 'store' => $rtStore, 'apiCallData' => $rtApiCallData];
+        return json_encode($responseJSON);
     }
 
     function triggerDataRequest($custId, $consentId, $consentHandleId, $dateTimeRangeFrom, $dateTimeRangeTo)
     {
-        $resultArr = [];
-        $client = new Client(['base_uri' => $this->baseUri, 'timeout'  => 2.0 ]);
+        $rtStatus = "success";
+        $rtStore = [];
+        $rtApiCallData = [];
+
+        $client = new Client(['base_uri' => $this->baseUri, 'timeout'  => 2.0]);
         $data = [
             'header' => ["rid" => Uuid::uuid4()->toString(), "ts" =>  date(\DateTime::ISO8601), "channelId" => "finsense"],
-            'body' => ["custId" => $custId, "consentId"=> $consentId, "consentHandleId" => $consentHandleId, "dateTimeRangeFrom"=> $dateTimeRangeFrom, 'dateTimeRangeTo' => $dateTimeRangeTo]
+            'body' => ["custId" => $custId, "consentId" => $consentId, "consentHandleId" => $consentHandleId, "dateTimeRangeFrom" => $dateTimeRangeFrom, 'dateTimeRangeTo' => $dateTimeRangeTo]
         ];
 
         $code = 0;
-        try{
-            $response = $client->request('POST', 'FIRequest', ['headers' => ['Authorization' => 'Bearer: '.$this->token, 'content-type' => 'application/json'], 'body' => json_encode($data)]);
-            $code = $response->getStatusCode();
-        }
-        catch(\Exception $e){
-            echo $e;
-        }
-        if($code ==200){
-            $contents = $response->getBody()->getContents();
-            $res = (object)json_decode($contents);
-            array_push($resultArr, ['txnid' => $res->body->txnid]);
-            array_push($resultArr, ['sessionId' => $res->body->sessionId]);
 
-        }else{
-            //throw new \Exception("API responded with error:"+$code);
-            print($code);
+        $rtApiCallData['endpoint'] =  $this->baseUri . 'FIRequest';
+        $rtApiCallData['request'] = $data;
+
+        try {
+            $response = $client->request('POST', 'FIRequest', ['headers' => ['Authorization' => 'Bearer: ' . $this->token, 'content-type' => 'application/json'], 'body' => json_encode($data)]);
+            $code = $response->getStatusCode();
+        } catch (\Exception $e) {
+            $rtStatus = "error";
         }
-        return $resultArr;
+
+        if ($code == 200) {
+            try {
+                $contents = $response->getBody()->getContents();
+                $rtApiCallData['response'] = $contents;
+
+                $res = (object)json_decode($contents);
+                if (!$res->body->sessionId) {
+                    throw new \Exception('invalid data');
+                }
+
+                $rtStore['txnid'] = $res->body->txnid;
+                $rtStore['sessionId'] = $res->body->sessionId;
+            } catch (\Exception $e) {
+                $rtStatus = "failure";
+            }
+        } else if ($code == 0) {
+            $rtStatus = "error";
+        } else {
+            $rtStatus = "failure";
+            try {
+                $contents  = $response->getBody()->getContents();
+                $rtApiCallData['response'] = $contents;
+            } catch (\Exception $e) {
+                $rtStatus = "failure";
+            }
+        }
+        $responseJSON = ['status' =>  $rtStatus, 'store' => $rtStore, 'apiCallData' => $rtApiCallData];
+        return json_encode($responseJSON);
     }
 
-    function checkFetchRequestStatus($consentId ,$sessionId, $consentHandleId, $custId)
+    function checkFetchRequestStatus($consentId, $sessionId, $consentHandleId, $custId)
     {
+        $rtStatus = "success";
+        $rtStore = [];
+        $rtApiCallData = [];
         $resultArr = [];
-        $client = new Client(['base_uri' => $this->baseUri, 'timeout'  => 2.0 ]);
+        $client = new Client(['base_uri' => $this->baseUri, 'timeout'  => 2.0]);
         $code = 0;
-        try{
-            $response = $client->request('GET', 'FIStatus/'. $consentId. '/'. $sessionId .'/'. $consentHandleId .'/'. $custId , ['headers' => ['Authorization' => 'Bearer: '.$this->token, 'content-type' => 'application/json']]);
+
+        $rtApiCallData['endpoint'] =  $this->baseUri . 'FIStatus/' . $consentId . '/' . $sessionId . '/' . $consentHandleId . '/' . $custId;
+        $rtApiCallData['request'] = "";
+        try {
+            $response = $client->request('GET', 'FIStatus/' . $consentId . '/' . $sessionId . '/' . $consentHandleId . '/' . $custId, ['headers' => ['Authorization' => 'Bearer: ' . $this->token, 'content-type' => 'application/json']]);
             $code = $response->getStatusCode();
+        } catch (\Exception $e) {
+            $rtStatus = "error";
         }
-        catch(\Exception $e){
-            echo $e;
+        if ($code == 200) {
+            try {
+                $contents = $response->getBody()->getContents();
+                $rtApiCallData['response'] = $contents;
+
+                $res = (object)json_decode($contents);
+                if (!$res->body->fiRequestStatus) {
+                    throw new \Exception('invalid data');
+                }
+                $rtStore['fiRequestStatus'] = $res->body->fiRequestStatus;
+            } catch (\Exception $e) {
+                $rtStatus = "failure";
+            }
+        } else if ($code == 0) {
+            $rtStatus = "error";
+        } else {
+            $rtStatus = "failure";
+            try {
+                $contents  = $response->getBody()->getContents();
+                $rtApiCallData['response'] = $contents;
+            } catch (\Exception $e) {
+                $rtStatus = "failure";
+            }
         }
-        if($code ==200){
-            $contents = $response->getBody()->getContents();
-            $res = (object)json_decode($contents);
-            array_push($resultArr, ['fiRequestStatus' => $res->body->fiRequestStatus]);
-        }else{
-            //throw new \Exception("API responded with error:"+$code);
-            print($code);
-        }
-        return $resultArr;
+        $responseJSON = ['status' =>  $rtStatus, 'store' => $rtStore, 'apiCallData' => $rtApiCallData];
+        return json_encode($responseJSON);
     }
 
-    function fetchData($custId, $consentId ,$sessionId)
+    function fetchData($custId, $consentId, $sessionId)
     {
-        $resultArr = [];
-        $client = new Client(['base_uri' => $this->baseUri, 'timeout'  => 2.0 ]);
-        $code = 0;
-        try{
-            $response = $client->request('GET', 'FIStatus/'. $custId. '/' . $consentId. '/'. $sessionId , ['headers' => ['Authorization' => 'Bearer: '.$this->token, 'content-type' => 'application/json']]);
-            $code = $response->getStatusCode();
-        }
-        catch(\Exception $e){
-            echo $e;
-        }
-        if($code ==200){
-            $contents = $response->getBody()->getContents();
-            $res = (object)json_decode($contents);
-            array_push($resultArr, ['fetchedData' => $res->body]);
-        }else{
-            //throw new \Exception("API responded with error:"+$code);
-            print($code);
-        }
-        return $resultArr;
-    }
+        $rtStatus = "success";
+        $rtStore = [];
+        $rtApiCallData = [];
 
+        $client = new Client(['base_uri' => $this->baseUri, 'timeout'  => 2.0]);
+        $code = 0;
+
+        $rtApiCallData['endpoint'] =  $this->baseUri . 'FIFetch/' . $custId . '/' . $consentId . '/' . $sessionId;
+        $rtApiCallData['request'] = "";
+
+        try {
+            $response = $client->request('GET', 'FIFetch/' . $custId . '/' . $consentId . '/' . $sessionId, ['headers' => ['Authorization' => 'Bearer: ' . $this->token, 'content-type' => 'application/json']]);
+            $code = $response->getStatusCode();
+        } catch (\Exception $e) {
+            $rtStatus = "error";
+        }
+        if ($code == 200) {
+            try {
+                $contents = $response->getBody()->getContents();
+                $rtApiCallData['response'] = $contents;
+
+                $res = (object)json_decode($contents);
+                if (!$res->body) {
+                    throw new \Exception('invalid data');
+                }
+
+                $rtStore['fetchedData'] = json_encode($res->body);
+            } catch (\Exception $e) {
+                $rtStatus = "failure";
+            }
+        } else if ($code == 0) {
+            $rtStatus = "error";
+        } else {
+            $rtStatus = "failure";
+            try {
+                $contents  = $response->getBody()->getContents();
+                $rtApiCallData['response'] = $contents;
+            } catch (\Exception $e) {
+                $rtStatus = "failure";
+            }
+        }
+
+        $responseJSON = ['status' =>  $rtStatus, 'store' => $rtStore, 'apiCallData' => $rtApiCallData];
+        return json_encode($responseJSON);
+    }
 }
