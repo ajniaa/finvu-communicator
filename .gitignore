@@ -40,3 +40,5 @@ nbproject/*
 .vscode
 # Sass preprocessor
 .sass-cache/
+# backup
+*backup.*

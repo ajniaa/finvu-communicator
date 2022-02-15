@@ -43,11 +43,13 @@ class Talker
 
             $code = 0;
             try {
-                $response = $client->request('POST', 'User/Login', ['body' => json_encode($data)]);
+                $response = $client->request('POST', 'User/Login', ['http_errors' => false, 'body' => json_encode($data)]);
                 $code = $response->getStatusCode();
             } catch (\Exception $e) {
-                $rtStatus = "error";
+                $rtStatus = "error";                
             }
+
+            $rtApiCallData['status_code'] = $code;
 
             if ($code == 200) {
                 try {
@@ -103,11 +105,14 @@ class Talker
 
         $code = 0;
         try {
-            $response = $client->request('POST', 'ConsentRequestEncrypt', ['headers' => ['Authorization' => 'Bearer: ' . $this->token, 'content-type' => 'application/json'], 'body' => json_encode($data)]);
+            $response = $client->request('POST', 'ConsentRequestEncrypt', ['http_errors' => false, 'headers' => ['Authorization' => 'Bearer: ' . $this->token, 'content-type' => 'application/json'], 'body' => json_encode($data)]);
             $code = $response->getStatusCode();
         } catch (\Exception $e) {
             $rtStatus = "error";
         }
+
+        $rtApiCallData['status_code'] = $code;
+
         if ($code == 200) {
             try {
                 $contents = $response->getBody()->getContents();
@@ -170,11 +175,14 @@ class Talker
         $rtApiCallData['endpoint'] =  $this->baseUri . 'ConsentStatus/' . $consentHandleId . '/' . $custId;
         $rtApiCallData['request'] = "";
         try {
-            $response = $client->request('GET', 'ConsentStatus/' . $consentHandleId . '/' . $custId, ['headers' => ['Authorization' => 'Bearer: ' . $this->token, 'content-type' => 'application/json']]);
+            $response = $client->request('GET', 'ConsentStatus/' . $consentHandleId . '/' . $custId, ['http_errors' => false, 'headers' => ['Authorization' => 'Bearer: ' . $this->token, 'content-type' => 'application/json']]);
             $code = $response->getStatusCode();
         } catch (\Exception $e) {
             $rtStatus = "error";
         }
+
+        $rtApiCallData['status_code'] = $code;
+
         if ($code == 200) {
             try {
                 $contents = $response->getBody()->getContents();
@@ -225,11 +233,13 @@ class Talker
         $rtApiCallData['request'] = $data;
 
         try {
-            $response = $client->request('POST', 'FIRequest', ['headers' => ['Authorization' => 'Bearer: ' . $this->token, 'content-type' => 'application/json'], 'body' => json_encode($data)]);
+            $response = $client->request('POST', 'FIRequest', ['http_errors' => false, 'headers' => ['Authorization' => 'Bearer: ' . $this->token, 'content-type' => 'application/json'], 'body' => json_encode($data)]);
             $code = $response->getStatusCode();
         } catch (\Exception $e) {
             $rtStatus = "error";
         }
+
+        $rtApiCallData['status_code'] = $code;
 
         if ($code == 200) {
             try {
@@ -273,11 +283,14 @@ class Talker
         $rtApiCallData['endpoint'] =  $this->baseUri . 'FIStatus/' . $consentId . '/' . $sessionId . '/' . $consentHandleId . '/' . $custId;
         $rtApiCallData['request'] = "";
         try {
-            $response = $client->request('GET', 'FIStatus/' . $consentId . '/' . $sessionId . '/' . $consentHandleId . '/' . $custId, ['headers' => ['Authorization' => 'Bearer: ' . $this->token, 'content-type' => 'application/json']]);
+            $response = $client->request('GET', 'FIStatus/' . $consentId . '/' . $sessionId . '/' . $consentHandleId . '/' . $custId, ['http_errors' => false, 'headers' => ['Authorization' => 'Bearer: ' . $this->token, 'content-type' => 'application/json']]);
             $code = $response->getStatusCode();
         } catch (\Exception $e) {
             $rtStatus = "error";
         }
+
+        $rtApiCallData['status_code'] = $code;
+
         if ($code == 200) {
             try {
                 $contents = $response->getBody()->getContents();
@@ -319,11 +332,14 @@ class Talker
         $rtApiCallData['request'] = "";
 
         try {
-            $response = $client->request('GET', 'FIFetch/' . $custId . '/' . $consentId . '/' . $sessionId, ['headers' => ['Authorization' => 'Bearer: ' . $this->token, 'content-type' => 'application/json']]);
+            $response = $client->request('GET', 'FIFetch/' . $custId . '/' . $consentId . '/' . $sessionId, ['http_errors' => false, 'headers' => ['Authorization' => 'Bearer: ' . $this->token, 'content-type' => 'application/json']]);
             $code = $response->getStatusCode();
         } catch (\Exception $e) {
             $rtStatus = "error";
         }
+
+        $rtApiCallData['status_code'] = $code;
+
         if ($code == 200) {
             try {
                 $contents = $response->getBody()->getContents();
