@@ -14,11 +14,13 @@ class Talker
     private $account;
     private $token;
     private $baseUri;
+    private $channelId;
 
     function __construct($account)
     {
         $this->account = $account;
-        $this->baseUri = "https://" . $account . ".fiu.finfactor.in/finsense/API/V1/";
+        $this->channelId = "finsense";
+        $this->baseUri = "https://" . $account . ".fiulive.finfactor.co.in/finsense/API/V1/";
     }
 
     function setAccessToken($token)
@@ -35,11 +37,11 @@ class Talker
         if (!$this->token) {
             $client = new Client(['base_uri' => $this->baseUri, 'timeout'  => 2.0,]);
             $data = [
-                'header' => ["rid" => Uuid::uuid4()->toString(), "ts" =>  date(\DateTime::ISO8601), "channelId" => "finsense"],
+                'header' => ["rid" => Uuid::uuid4()->toString(), "ts" =>  date(\DateTime::ISO8601), "channelId" => $this->channelId],
                 'body' => ["userId" => $login, "password" => $pass]
             ];
             $rtApiCallData['endpoint'] =  $this->baseUri . 'User/Login';
-            $rtApiCallData['request'] = $data;
+            $rtApiCallData['request'] = json_encode($data);
 
             $code = 0;
             try {
@@ -96,7 +98,7 @@ class Talker
 
         $client = new Client(['base_uri' => $this->baseUri, 'timeout'  => 2.0]);
         $data = [
-            'header' => ["rid" => Uuid::uuid4()->toString(), "ts" =>  date(\DateTime::ISO8601), "channelId" => "finsense"],
+            'header' => ["rid" => Uuid::uuid4()->toString(), "ts" =>  date(\DateTime::ISO8601), "channelId" => $this->channelId],
             'body' => ["custId" => $custId, "consentDescription" => $consentDescription, "templateName" => $templateName, "userSessionId" => $userSessionId]
         ];
 
@@ -124,7 +126,7 @@ class Talker
                     throw new \Exception('invalid data');
                 }
 
-                $outputText = '<script src="https://finvu.in/sdk/dist/finvu-aa.js"></script>
+                $outputText = '<script src="https://webvwlive.finvu.in/sdk/bridge/finvu-aa.js"></script>
                 <script>
                 var ecreq = "' . $res->body->encryptedRequest . '"; var reqdate = "' . $res->body->requestDate . '";var fi = "' . $res->body->encryptedFiuId . '";
                 function launchAA(event){
@@ -223,7 +225,7 @@ class Talker
 
         $client = new Client(['base_uri' => $this->baseUri, 'timeout'  => 2.0]);
         $data = [
-            'header' => ["rid" => Uuid::uuid4()->toString(), "ts" =>  date(\DateTime::ISO8601), "channelId" => "finsense"],
+            'header' => ["rid" => Uuid::uuid4()->toString(), "ts" =>  date(\DateTime::ISO8601), "channelId" => $this->channelId],
             'body' => ["custId" => $custId, "consentId" => $consentId, "consentHandleId" => $consentHandleId, "dateTimeRangeFrom" => $dateTimeRangeFrom, 'dateTimeRangeTo' => $dateTimeRangeTo]
         ];
 
